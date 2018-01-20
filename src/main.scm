@@ -38,7 +38,7 @@
 (define notebook-info-key              (get-notebook-info-atom "key"))
 
 ;; execute counter closure
-(define execute-counter (let ((x 1)) (lambda () (begin (set! x (+ x 1)) x))))
+(define execute-counter (let ((x 0)) (lambda () (begin (set! x (+ x 1)) x))))
 
 (define (create-address port) (string-append notebook-info-transport "://" notebook-info-ip ":" (number->string port)))
 
