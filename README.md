@@ -41,3 +41,13 @@ $ guile -c '(display %load-path) (newline)'
 ```
 To place guile-json to /usr/share/guile/site/ folder I executed ```$ ./configure --prefix=/usr```
 
+In order to get ZeroMQ messages, guile needs another library - [guile-simple-zmq](https://github.com/jerry40/guile-simple-zmq)
+
+It is one guile file which is not needed to be compiled so actually you can place it directly to the guile library folder:
+```
+$ cd `guile -c "(display (%global-site-dir))"`
+$ wget https://github.com/jerry40/guile-simple-zmq/blob/master/src/simple-zmq.scm
+```
+
+## Kernel setup
+
