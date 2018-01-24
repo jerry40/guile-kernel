@@ -1,6 +1,8 @@
 # guile-kernel
 Guile kernel for Jupyter Notebook (Written and tested with GNU Guile 2.0.11)
 
+Note: Message signing is not working yet, so it must be switched off in jupiter config file. See details there please: https://github.com/jerry40/guile-simple-zmq/issues/1
+
 ## Example
 ![](Demo1.png)
 
