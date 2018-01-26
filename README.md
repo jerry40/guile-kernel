@@ -1,7 +1,9 @@
 # guile-kernel
 Guile kernel for Jupyter Notebook (Written and tested with GNU Guile 2.0.11)
 
-Note: Message signing is not working yet, so it must be switched off in jupiter config file. See details there please: https://github.com/jerry40/guile-simple-zmq/issues/1
+Note 1: Message signing is not working yet, so it must be switched off in jupiter config file. See details there please: https://github.com/jerry40/guile-simple-zmq/issues/1
+
+Note 2: Buffer size in [guile-simple-zmq](https://github.com/jerry40/guile-simple-zmq) is set to 4096 bytes, so code in a Jupyter cell should be shorter than this! In case you need longer code, increase BUF-SIZE in guile-simple-zmq.
 
 ## Example
 ![](Demo1.png)
@@ -52,4 +54,30 @@ $ wget https://github.com/jerry40/guile-simple-zmq/blob/master/src/simple-zmq.sc
 ```
 
 ## Kernel setup
+According to the [article](http://jupyter-client.readthedocs.io/en/stable/kernels.html), the kernel can be placed into different loactions:
 
+|     |Unix|Windows
+| --- | --- | ---
+System|/usr/share/jupyter/kernels<br>/usr/local/share/jupyter/kernels| %PROGRAMDATA%\jupyter\kernels
+Env   |{sys.prefix}/share/jupyter/kernels|
+User  |\~/.local/share/jupyter/kernels (Linux)<br>~/Library/Jupyter/kernels (Mac)|%APPDATA%\jupyter\kernels
+
+Choose one of them and create there a folder ```guile```. After that copy files from ```src``` folder of thos repo and edit file ```kernel.json``` this way: replace ### with the full path to the folder ```guile``` you created):
+```
+{
+    "argv": ["guile", "-s", "###/guile/main.scm", "--", "{connection_file}"],
+    "display_name": "Guile",
+    "language": "scheme"
+}
+```
+
+Example:
+```
+{
+    "argv": ["guile", "-s", "/home/jerry/.local/share/jupyter/kernels/guile/main.scm", "--", "{connection_file}"],
+    "display_name": "Guile",
+    "language": "scheme"
+}
+```
+
+After this, start Jupyter Notebook and check if the guile kernel is visible by it. 
