@@ -1,25 +1,19 @@
+(use-modules (ice-9 rdelim)
+	     (ice-9 popen))
+
+(define (get-signature key str)
+  (let* ((p2c (pipe))	 
+	 (read-pipe  (car p2c))
+	 (write-pipe (cdr p2c))
+	 (port       (with-input-from-port read-pipe
+		       (lambda ()
+			 (open-input-pipe (string-append "openssl dgst -sha256 -hmac " key))))))
+    (display str write-pipe)    
+    (close-port write-pipe)
+    (let ((result (read-line port)))
+      (close-port read-pipe)
+      (close-pipe port)
+      result)))
+	 
 
 
-;(define (get-signature signature-scheme key str-list)
-;  (
-
-(use-modules (ice-9 popen))
-   (use-modules (ice-9 rdelim))
-   
-(let ((port (open-input-output-pipe "openssl dgst -sha256 -hmac aaa")))
-  (display "aaa" port)
-  (force-output port)
-  (read port)
-  )
-
-
-   (let* ((p2c (pipe))
-           (port (with-input-from-port (car p2c)
-                   (lambda ()
-                     (open-input-pipe "read line && echo $line | openssl dgst -sha256 -hmac aaa")))))
-      (display "aaa" (cdr p2c))
-      (force-output (cdr p2c))
-      (let ((result (read port)))
-	(close-port (cdr p2c))
-	(close-pipe port)
-	result))
