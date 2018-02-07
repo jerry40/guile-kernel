@@ -13,7 +13,7 @@
     (let ((result (read-line port)))
       (close-port read-pipe)
       (close-pipe port)
-      result)))
+      (substring result 9))))
 	 
 
 

@@ -2,9 +2,9 @@
 	     (json)
 	     (srfi srfi-1)
              (srfi srfi-13))
-	     
-;(include "zmq.scm")
+
 (include "tools.scm")
+(include "hmac.scm")
 
 (define DELIM "<IDS|MSG>")
 
@@ -19,7 +19,7 @@
 			("pygments_lexer" . "scheme")
 			("codemirror_mode" . "scheme")))
 		      ("banner" . "Guile kernel")
-;;				 ("help-links" . (("" . "")))
+		      ("help_links" . (("GitHub" . "https://github.com/jerry40/guile-kernel")))
 		      ))
 
 (define notebook-info (json->scm (open-input-file (car (last-pair (command-line))))))
@@ -66,15 +66,10 @@
 ;; bind sockets to addressess
 (for-each zmq-bind-socket sockets adresses)
 
-;(define hb-message (zmq-msg-init))
-;(define shell-message (zmq-msg-init))
-;(define control-message (zmq-msg-init))
-;(define iopub-message (zmq-msg-init))
-;(define stdin-message (zmq-msg-init))
-
-
-(define (send socket uuid header parent-header metadata content)
-  (zmq-send-msg-parts socket (list uuid DELIM "" header parent-header metadata content)))
+(define (send socket uuid header parent-header metadata content)  
+  (display (get-signature notebook-info-key (string-append header parent-header metadata content)))
+  (let ((signature (get-signature notebook-info-key (string-append header parent-header metadata content))))
+    (zmq-send-msg-parts socket (list uuid DELIM signature header parent-header metadata content))))
 
 (define (pub header- state parent-header)
   (send socket-iopub ""	(header- "status") parent-header "{}" (scm->json-string `(("execution_state" . ,state)))))
@@ -109,12 +104,11 @@
       )))
     (general-handler socket))
 
-
 (define (reply-kernel-info-request socket uuid header- parent-header metadata content)
   (send socket uuid (header- "kernel_info_reply") parent-header metadata (scm->json-string KERNEL-INFO)))
 
 (define (reply-execute-request socket uuid header- parent-header metadata content)
-  (let ((code              (string-append "(begin " (hash-ref content "code") ")")) ;; make one s-expression from possible list
+  (let ((code              (string-append    "(begin " (hash-ref content "code") ")")) ;; make one s-expression from possible list
 	(silent            (hash-ref content "silent"))
 	(store-history     (hash-ref content "store_history"))
 	(user-expressions  (hash-ref content "user_expressions"))
@@ -126,7 +120,9 @@
 	  (err-key #f)
 	  (evalue #f)
 	  (stacktrace #f)
-	  (result #f))
+	  (result #f)
+	  (send- (lambda (socket msg-type content) (send socket uuid (header- msg-type) parent-header metadata (scm->json-string content))))
+	  )
       (catch #t
 	     ;; evaluate code
 	     (lambda ()
@@ -140,44 +136,33 @@
 	       (set! stacktrace (list (colorize err-key) evalue))
 	       )
 	     ;; Capture the stack here:
-;	     (lambda (key . parameters)
-	       ;;(set! stacktrace (map colorize (make-stack #t))))
-;	       (set! stacktrace (list (car parameters) err-key evalue))
-					;	       )
 	     )
-      (send socket-iopub uuid (header- "execute_input") parent-header metadata (scm->json-string `(("code" . ,code)
-												   ("execution_count" . ,counter))
-												 ))
+      (send- socket-iopub "execute_input" `(("code" . ,code)
+					    ("execution_count" . ,counter)))	     
       (when err
-	(send socket-iopub uuid (header- "error") parent-header metadata (scm->json-string `(("ename" . ,err-key)
-											     ("evalue" . ,evalue)
-											     ("traceback" . ,stacktrace)
-											     )))
-	(send socket uuid (header- "execute_reply") parent-header metadata (scm->json-string `(("status" . "error")
-											       ("execution_count" . ,counter)
-											       ("ename" . ,err-key)
-											       ("evalue" . ,evalue)
-											       ("traceback" . ,stacktrace)
-											       ("payload" . [])
-											       ("user_expressions" . ,empty-object)
-											       ))))
+	(send- socket-iopub "error"       `(("ename" . ,err-key)
+					    ("evalue" . ,evalue)
+					    ("traceback" . ,stacktrace)))
+	(send- socket      "execute_reply" `(("status" . "error")
+					    ("execution_count" . ,counter)
+					    ("ename" . ,err-key)
+					    ("evalue" . ,evalue)
+					    ("traceback" . ,stacktrace)
+					    ("payload" . [])
+					    ("user_expressions" . ,empty-object))))
       (unless err
-	(send socket uuid (header- "execute_reply") parent-header metadata (scm->json-string `(("status" . "ok")
-											       ("execution_count" . ,counter)
-											       ("payload" . [])
-											       ("user_expressions" . ,empty-object)
-											       )))
-	  
-	(send socket-iopub uuid (header- "execute_result") parent-header metadata (scm->json-string `(("data" .  (("text/plain" . ,result)))
-												      ("metadata" . ,empty-object)
-												      ("execution_count" . ,counter))
-												    ))))))
+	(send- socket       "execute_reply"   `(("status" . "ok")
+						("execution_count" . ,counter)
+						("payload" . [])
+						("user_expressions" . ,empty-object)))
+	(send- socket-iopub "execute_result"  `(("data" .  (("text/plain" . ,result)))
+						("metadata" . ,empty-object)
+						("execution_count" . ,counter)))))))
 
 (define (shutdown socket uuid header- parent-header metadata content)
   (for-each zmq-close-socket sockets)
   (zmq-destroy-context context)
   (quit))
-
 
 (define dispatch-route
   `(("kernel_info_request" . ,reply-kernel-info-request)
@@ -193,43 +178,4 @@
 	    (display "\n"))
     res))
 
-
  (general-handler socket-shell)
-
-;(parallel
-; (heartbeat-handler)
-; (general-handler socket-shell)
-; (general-handler socket-control)
-;; (general-handler socket-iopub)
-; (general-handler socket-stdin)
-; )
-
-;(par-map general-handler sockets messages)
-
-;(display "Waiting")
-
-;(while #t)
-
-;(display addr-heartbeat)
-;(zmq-get-socket-type 'ZMQ_PUSH)
-;(define s (zmq-create-socket context 'ZMQ_REQ))
-;(zmq-bind-socket s addr-heartbeat)
-;(zmq-bind-socket socket-heartbeat addr-heartbeat) 
-;(define m (zmq-message-receive socket-heartbeat))
-;(display "Ok!!")
-;(display (pointer->string (zmq-message-content m)))
-;(zmq-message-send socket-heartbeat (zmq-msg-init))
-;(define m (zmq-message-receive socket-heartbeat))
-					;(display "Ok!!")
-
-;(display addr-heartbeat)
-;(define s (zmq-create-socket context 'ZMQ_REP))
-;(zmq-bind-socket s addr-heartbeat) ; "tcp://127.0.0.1:5555")
-;(define m (zmq-msg-init))
-;(while #t
-;       (display "Listening:")
-;       (zmq-message-receive s m)
-;       (display "Ok!!")
-;       (display (pointer->string (zmq-message-content m)))
-;       (zmq-message-send s m)
-;       )
