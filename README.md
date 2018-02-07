@@ -1,9 +1,7 @@
 # guile-kernel
 Guile kernel for Jupyter Notebook (Written and tested with GNU Guile 2.0.11)
 
-Note 1: Message signing is not working yet, so it must be switched off in jupiter config file. See details there please: https://github.com/jerry40/guile-simple-zmq/issues/1
-
-Note 2: Buffer size in [guile-simple-zmq](https://github.com/jerry40/guile-simple-zmq) is set to 4096 bytes, so code in a Jupyter cell should be shorter than this! In case you need longer code, increase BUF-SIZE in guile-simple-zmq.
+Note: Buffer size in [guile-simple-zmq](https://github.com/jerry40/guile-simple-zmq) is set to 4096 bytes, so code in a Jupyter cell should be shorter than this! In case you need longer code, increase BUF-SIZE in guile-simple-zmq.
 
 ## Example
 ![](Demo1.png)
