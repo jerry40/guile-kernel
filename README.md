@@ -63,7 +63,7 @@ User  |\~/.local/share/jupyter/kernels (Linux)<br>~/Library/Jupyter/kernels (Mac
 Choose one of them and create there a folder ```guile```. After that copy files from ```src``` folder of thos repo and edit file ```kernel.json``` this way: replace ### with the full path to the folder ```guile``` you created):
 ```
 {
-    "argv": ["guile", "-s", "###/guile/main.scm", "--", "{connection_file}"],
+    "argv": ["guile", "-s", "###/guile/guile-jupyter-kernel.scm", "--", "{connection_file}"],
     "display_name": "Guile",
     "language": "scheme"
 }
@@ -72,7 +72,7 @@ Choose one of them and create there a folder ```guile```. After that copy files 
 Example:
 ```
 {
-    "argv": ["guile", "-s", "/home/jerry/.local/share/jupyter/kernels/guile/main.scm", "--", "{connection_file}"],
+    "argv": ["guile", "-s", "/home/jerry/.local/share/jupyter/kernels/guile/guile-jupyter-kernel.scm", "--", "{connection_file}"],
     "display_name": "Guile",
     "language": "scheme"
 }
