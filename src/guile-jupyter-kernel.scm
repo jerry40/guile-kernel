@@ -10,7 +10,7 @@
 
 (define KERNEL-INFO '(("protocol_version" . "5.3.0")
 		      ("implementation" . "guile Jupyter kernel")
-		      ("implementation_version" . "0.0.1")
+		      ("implementation_version" . "0.0.2")
 		      ("language_info" .
 		       (("name" . "guile")
 			("version" . "2.0.0")
@@ -37,8 +37,8 @@
 (define notebook-info-iopub-port       (get-notebook-info-atom "iopub_port"))
 (define notebook-info-key              (get-notebook-info-atom "key"))
 
-;; execute counter closure
-(define execute-counter (let ((x 0)) (lambda () (begin (set! x (+ x 1)) x))))
+;; execution counter closure
+(define execution-counter (let ((x 0)) (lambda () (begin (set! x (+ x 1)) x))))
 
 (define (create-address port) (string-append notebook-info-transport "://" notebook-info-ip ":" (number->string port)))
 
@@ -67,7 +67,6 @@
 (for-each zmq-bind-socket sockets adresses)
 
 (define (send socket uuid header parent-header metadata content)  
-  (display (get-signature notebook-info-key (string-append header parent-header metadata content)))
   (let ((signature (get-signature notebook-info-key (string-append header parent-header metadata content))))
     (zmq-send-msg-parts socket (list uuid DELIM signature header parent-header metadata content))))
 
@@ -104,6 +103,10 @@
       )))
     (general-handler socket))
 
+;; unknown request type, ignore it
+(define (ignore-request socket uuid header- parent-header metadata content) #f)
+
+;; send kernel-info
 (define (reply-kernel-info-request socket uuid header- parent-header metadata content)
   (send socket uuid (header- "kernel_info_reply") parent-header metadata (scm->json-string KERNEL-INFO)))
 
@@ -115,7 +118,7 @@
 	(allow-stdin       (hash-ref content "allow_stdin"))
 	(stop-on-error     (hash-ref content "stop_on_error"))
 	(empty-object      (make-hash-table 1))
-	(counter           (execute-counter)))
+	(counter           (execution-counter)))
     (let ((err #f)
 	  (err-key #f)
 	  (evalue #f)
@@ -168,14 +171,14 @@
   `(("kernel_info_request" . ,reply-kernel-info-request)
     ("execute_request"     . ,reply-execute-request)
     ("shutdown_request"    . ,shutdown)
+    ("comm_info_request"   . ,ignore-request)
     ))
 
 (define (dispatch msg-type)
   (let ((res (assoc-ref dispatch-route msg-type)))
     (unless res
-	    (display "\n----------------------->")
-	    (display msg-type)
-	    (display "\n"))
-    res))
+      (display
+       (string-append "\n(WW) unknown message type: " msg-type "\n\n")))
+    (if res res ignore-request)))
 
- (general-handler socket-shell)
+(general-handler socket-shell)
