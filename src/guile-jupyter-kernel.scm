@@ -111,10 +111,6 @@
   (send socket uuid (header- "kernel_info_reply") parent-header metadata (scm->json-string KERNEL-INFO)))
 
 (define (reply-execute-request socket uuid header- parent-header metadata content)
-  (define (proper-print x)
-    (if (unspecified? x)
-        ""
-        x))
   (let ((code              (string-append    "(begin " (hash-ref content "code") ")")) ;; make one s-expression from possible list
 	(silent            (hash-ref content "silent"))
 	(store-history     (hash-ref content "store_history"))
@@ -133,8 +129,7 @@
       (catch #t
 	     ;; evaluate code
 	     (lambda ()
-	       (set! result (with-output-to-string
-			      (lambda () (proper-print (eval-string code (interaction-environment)))))))
+	       (set! result (eval-string code (interaction-environment))))
 	     ;; get error message in case of an exception
 	     (lambda (key . parameters)
 	       (set! err #t) 
@@ -162,9 +157,10 @@
 						("execution_count" . ,counter)
 						("payload" . [])
 						("user_expressions" . ,empty-object)))
-	(send- socket-iopub "execute_result"  `(("data" .  (("text/plain" . ,result)))
-						("metadata" . ,empty-object)
-						("execution_count" . ,counter)))))))
+	(unless (unspecified? result) ;; if the result is unspecified, suppress execute_result message
+	  (send- socket-iopub "execute_result"  `(("data" .  (("text/plain" . ,(with-output-to-string (lambda () (display result))))))
+						  ("metadata" . ,empty-object)
+						  ("execution_count" . ,counter))))))))
 
 (define (shutdown socket uuid header- parent-header metadata content)
   (for-each zmq-close-socket sockets)
