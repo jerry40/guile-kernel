@@ -53,11 +53,11 @@
 (define addr-stdin     (create-address notebook-info-stdin-port))
 
 ;; sockets
-(define socket-heartbeat (zmq-create-socket context 'ZMQ_REP))
-(define socket-shell     (zmq-create-socket context 'ZMQ_ROUTER))
-(define socket-control   (zmq-create-socket context 'ZMQ_ROUTER))
-(define socket-iopub     (zmq-create-socket context 'ZMQ_PUB))
-(define socket-stdin     (zmq-create-socket context 'ZMQ_ROUTER))
+(define socket-heartbeat (zmq-create-socket context ZMQ_REP))
+(define socket-shell     (zmq-create-socket context ZMQ_ROUTER))
+(define socket-control   (zmq-create-socket context ZMQ_ROUTER))
+(define socket-iopub     (zmq-create-socket context ZMQ_PUB))
+(define socket-stdin     (zmq-create-socket context ZMQ_ROUTER))
 
 ;; useful lists
 (define adresses         (list addr-heartbeat addr-shell addr-control addr-iopub addr-stdin))
