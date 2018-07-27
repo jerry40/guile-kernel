@@ -67,11 +67,27 @@
 (for-each zmq-bind-socket sockets adresses)
 
 (define (send socket uuid header parent-header metadata content)  
-  (let ((signature (get-signature notebook-info-key (string-append header parent-header metadata content))))
-    (zmq-send-msg-parts socket (list uuid DELIM signature header parent-header metadata content))))
+    (let ((signature (get-signature notebook-info-key
+				     (string-append header
+						    parent-header
+						    metadata
+						    content))))
+      (zmq-send-msg-parts-bytevector socket
+				     (list uuid
+					   (string->bv DELIM)
+					   (string->bv signature)
+					   (string->bv header)
+					   (string->bv parent-header)
+					   (string->bv metadata)
+					   (string->bv content)))))
 
 (define (pub header- state parent-header)
-  (send socket-iopub ""	(header- "status") parent-header "{}" (scm->json-string `(("execution_state" . ,state)))))
+    (send socket-iopub
+	  #vu8(65)
+	  (header- "status")
+	  parent-header
+	  "{}"
+	  (scm->json-string `(("execution_state" . ,state)))))
 
 (define (pub-busy header- parent-header)
   (pub header- "busy" parent-header))
@@ -80,18 +96,20 @@
   (pub header- "idle" parent-header))
 
 (define (heartbeat-handler)
-  (zmq-message-send socket-heartbeat (zmq-message-receive socket-heartbeat (zmq-msg-init)))
+    (zmq-message-send-bytevector socket-heartbeat
+		      (zmq-message-receive-bytevector socket-heartbeat
+					   (zmq-msg-init)))
   (heartbeat-handler))
 
 (define (general-handler socket)
-  (let* ((parts (zmq-get-msg-parts socket))
+  (let* ((parts (zmq-get-msg-parts-bytevector socket))
 	 (wire-uuid          (car parts))
-	 (wire-delimiter     (cadr parts))
-	 (wire-signature     (caddr parts))
-	 (wire-header        (json-string->scm(list-ref parts 3)))
-	 (wire-parent-header (list-ref parts 4))
-	 (wire-metadata      (json-string->scm(list-ref parts 5)))
-	 (wire-content       (json-string->scm(list-ref parts 6))))
+	 (wire-delimiter     (bv->string (cadr parts)))
+	 (wire-signature     (bv->string (caddr parts)))
+	 (wire-header        (json-string->scm (bv->string (list-ref parts 3))))
+	 (wire-parent-header (bv->string (list-ref parts 4)))
+	 (wire-metadata      (json-string->scm (bv->string (list-ref parts 5))))
+	 (wire-content       (json-string->scm (bv->string (list-ref parts 6)))))
     (let ((msg-type      (hash-ref wire-header "msg_type"))
 	  (msg-username  (hash-ref wire-header "username"))
 	  (msg-session   (hash-ref wire-header "session"))
@@ -108,7 +126,12 @@
 
 ;; send kernel-info
 (define (reply-kernel-info-request socket uuid header- parent-header metadata content)
-  (send socket uuid (header- "kernel_info_reply") parent-header metadata (scm->json-string KERNEL-INFO)))
+    (send socket
+	  uuid
+	  (header- "kernel_info_reply")
+	  parent-header
+	  metadata
+	  (scm->json-string KERNEL-INFO)))
 
 (define (reply-execute-request socket uuid header- parent-header metadata content)
   (let ((code              (string-append    "(begin " (hash-ref content "code") ")")) ;; make one s-expression from possible list
