@@ -3,7 +3,7 @@ Guile kernel for Jupyter Notebook (Written and tested with GNU Guile 2.0.11)
 
 Note: Buffer size in [guile-simple-zmq](https://github.com/jerry40/guile-simple-zmq) is set to 4096 bytes, so code in a Jupyter cell should be shorter than this! In case you need longer code, increase BUF-SIZE in guile-simple-zmq.
 
-Note 2: jupyter notebook 5.6.0 waits for 1 minute after start. I think it is a bug on the jupyter side (it sends first kernel_info_request without uuid and I can't send it back properly, working on it).
+Note 2: [FIXED] jupyter notebook 5.6.0 waits for 1 minute after start.
 
 ## Example
 ![](Demo1.png)
