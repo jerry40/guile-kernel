@@ -1,7 +1,8 @@
 (use-modules (simple-zmq)
 	     (json)
 	     (srfi srfi-1)
-             (srfi srfi-13))
+             (srfi srfi-13)
+			 (ice-9 hash-table))
 
 (include "tools.scm")
 (include "hmac.scm")
@@ -22,9 +23,12 @@
 		      ("help_links" . (("GitHub" . "https://github.com/jerry40/guile-kernel")))
 		      ))
 
+
+(define (alist-ref alist name) (hash-ref (alist->hash-table alist) name))
+
 (define notebook-info (json->scm (open-input-file (car (last-pair (command-line))))))
 
-(define (get-notebook-info-atom name) (hash-ref notebook-info name))
+(define (get-notebook-info-atom name) (alist-ref notebook-info name))
 
 ;; parse json values
 (define notebook-info-control-port     (get-notebook-info-atom "control_port"))
@@ -101,6 +105,11 @@
 								 (zmq-msg-init)))
   (heartbeat-handler))
 
+(define (json-or-empty alist)
+	(if (eqv? '() alist)
+		"{}"
+		(scm->json-string alist)))
+
 (define (general-handler socket)
     (let* ((parts (zmq-get-msg-parts-bytevector socket))
 	   (wire-uuid          (car parts))
@@ -110,14 +119,15 @@
 	   (wire-parent-header (bv->string (list-ref parts 4)))
 	   (wire-metadata      (json-string->scm (bv->string (list-ref parts 5))))
 	   (wire-content       (json-string->scm (bv->string (list-ref parts 6)))))
-      (let ((msg-type      (hash-ref wire-header "msg_type"))
-	    (msg-username  (hash-ref wire-header "username"))
-	    (msg-session   (hash-ref wire-header "session"))
-	    (msg-version   (hash-ref wire-header "version")))
+      (let ((msg-type      (alist-ref wire-header "msg_type"))
+	    (msg-username  (alist-ref wire-header "username"))
+	    (msg-session   (alist-ref wire-header "session"))
+	    (msg-version   (alist-ref wire-header "version")))
+		; (display (json-or-empty header-))
 	(let ((header- (make-header msg-username msg-session msg-version)))
-	  (pub-busy header- (scm->json-string wire-header))
-	  ((dispatch msg-type) socket wire-uuid header- (scm->json-string wire-header) (scm->json-string wire-metadata) wire-content)
-	  (pub-idle header- (scm->json-string wire-header))
+	  (pub-busy header- (json-or-empty wire-header))
+	  ((dispatch msg-type) socket wire-uuid header- (json-or-empty wire-header) (json-or-empty wire-metadata) (json-or-empty wire-content))
+	  (pub-idle header- (json-or-empty wire-header))
 	  )))
   (general-handler socket))
 
@@ -134,12 +144,12 @@
 	  (scm->json-string KERNEL-INFO)))
 
 (define (reply-execute-request socket uuid header- parent-header metadata content)
-    (let ((code              (string-append    "(begin " (hash-ref content "code") ")")) ;; make one s-expression from possible list
-	  (silent            (hash-ref content "silent"))
-	  (store-history     (hash-ref content "store_history"))
-	  (user-expressions  (hash-ref content "user_expressions"))
-	  (allow-stdin       (hash-ref content "allow_stdin"))
-	  (stop-on-error     (hash-ref content "stop_on_error"))
+    (let ((code              (string-append    "(begin " (alist-ref content "code") ")")) ;; make one s-expression from possible list
+	  (silent            (alist-ref content "silent"))
+	  (store-history     (alist-ref content "store_history"))
+	  (user-expressions  (alist-ref content "user_expressions"))
+	  (allow-stdin       (alist-ref content "allow_stdin"))
+	  (stop-on-error     (alist-ref content "stop_on_error"))
 	  (empty-object      (make-hash-table 1))
 	  (counter           (execution-counter)))
       (let ((err #f)
