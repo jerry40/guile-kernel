@@ -1,7 +1,8 @@
 (use-modules (simple-zmq)
 	     (json)
 	     (srfi srfi-1)
-             (srfi srfi-13))
+             (srfi srfi-13)
+			 (ice-9 hash-table))
 
 (include "tools.scm")
 (include "hmac.scm")
@@ -24,7 +25,7 @@
 
 (define notebook-info (json->scm (open-input-file (car (last-pair (command-line))))))
 
-(define (get-notebook-info-atom name) (hash-ref notebook-info name))
+(define (get-notebook-info-atom name) (assoc-ref notebook-info name))
 
 ;; parse json values
 (define notebook-info-control-port     (get-notebook-info-atom "control_port"))
@@ -101,6 +102,11 @@
 								 (zmq-msg-init)))
   (heartbeat-handler))
 
+(define (json-or-empty alist)
+	(if (eqv? '() alist)
+		"{}"
+		(scm->json-string alist)))
+
 (define (general-handler socket)
     (let* ((parts (zmq-get-msg-parts-bytevector socket))
 	   (wire-uuid          (car parts))
@@ -110,14 +116,14 @@
 	   (wire-parent-header (bv->string (list-ref parts 4)))
 	   (wire-metadata      (json-string->scm (bv->string (list-ref parts 5))))
 	   (wire-content       (json-string->scm (bv->string (list-ref parts 6)))))
-      (let ((msg-type      (hash-ref wire-header "msg_type"))
-	    (msg-username  (hash-ref wire-header "username"))
-	    (msg-session   (hash-ref wire-header "session"))
-	    (msg-version   (hash-ref wire-header "version")))
+      (let ((msg-type      (assoc-ref wire-header "msg_type"))
+	    (msg-username  (assoc-ref wire-header "username"))
+	    (msg-session   (assoc-ref wire-header "session"))
+	    (msg-version   (assoc-ref wire-header "version")))
 	(let ((header- (make-header msg-username msg-session msg-version)))
-	  (pub-busy header- (scm->json-string wire-header))
-	  ((dispatch msg-type) socket wire-uuid header- (scm->json-string wire-header) (scm->json-string wire-metadata) wire-content)
-	  (pub-idle header- (scm->json-string wire-header))
+	  (pub-busy header- (json-or-empty wire-header))
+	  ((dispatch msg-type) socket wire-uuid header- (json-or-empty wire-header) (json-or-empty wire-metadata) wire-content)
+	  (pub-idle header- (json-or-empty wire-header))
 	  )))
   (general-handler socket))
 
@@ -134,12 +140,12 @@
 	  (scm->json-string KERNEL-INFO)))
 
 (define (reply-execute-request socket uuid header- parent-header metadata content)
-    (let ((code              (string-append    "(begin " (hash-ref content "code") ")")) ;; make one s-expression from possible list
-	  (silent            (hash-ref content "silent"))
-	  (store-history     (hash-ref content "store_history"))
-	  (user-expressions  (hash-ref content "user_expressions"))
-	  (allow-stdin       (hash-ref content "allow_stdin"))
-	  (stop-on-error     (hash-ref content "stop_on_error"))
+    (let ((code              (string-append    "(begin " (assoc-ref content "code") ")")) ;; make one s-expression from possible list
+	  (silent            (assoc-ref content "silent"))
+	  (store-history     (assoc-ref content "store_history"))
+	  (user-expressions  (assoc-ref content "user_expressions"))
+	  (allow-stdin       (assoc-ref content "allow_stdin"))
+	  (stop-on-error     (assoc-ref content "stop_on_error"))
 	  (empty-object      (make-hash-table 1))
 	  (counter           (execution-counter)))
       (let ((err #f)
@@ -147,7 +153,7 @@
 	    (evalue #f)
 	    (stacktrace #f)
 	    (result #f)
-	    (send- (lambda (socket msg-type content) (send socket uuid (header- msg-type) parent-header metadata (scm->json-string content))))
+	    (send- (lambda (socket msg-type content) (send socket uuid (header- msg-type) parent-header metadata (json-or-empty content))))
 	    )
 	(catch #t
 	  ;; evaluate code + replace #undefined in case an expression returned nothing
@@ -166,31 +172,30 @@
 	    (set! err #t) 
 	    (set! err-key (with-output-to-string (lambda () (display key))))
 	    (set! evalue (with-output-to-string (lambda () (display parameters))))
-	    (set! stacktrace (list (colorize err-key) evalue))
-	    )
+	    (set! stacktrace (vector err-key evalue))
 	  ;; Capture the stack here:
 	  )
+	  
 	(send- socket-iopub "execute_input" `(("code" . ,code)
 					      ("execution_count" . ,counter)))	     
 	(when err
-	  (send- socket-iopub "error"       `(("ename" . ,err-key)
+	  (send- socket-iopub "error"       `(
+		  				  ("ename" . ,err-key)
 					      ("evalue" . ,evalue)
-					      ("traceback" . ,stacktrace)))
+					      ("traceback" . ,stacktrace)
+						))
 	  (send- socket      "execute_reply" `(("status" . "error")
 					       ("execution_count" . ,counter)
 					       ("ename" . ,err-key)
 					       ("evalue" . ,evalue)
 					       ("traceback" . ,stacktrace)
-					       ("payload" . [])
-					       ("user_expressions" . ,empty-object))))
+						   )))
 	(unless err
 	  (send- socket       "execute_reply"   `(("status" . "ok")
 						  ("execution_count" . ,counter)
-						  ("payload" . [])
-						  ("user_expressions" . ,empty-object)))
+						  ))
 	  (unless (string-null? result)
 	    (send- socket-iopub "execute_result"  `(("data" .  (("text/plain" . ,(with-output-to-string (lambda () (display result))))))
-						    ("metadata" . ,empty-object)
 						    ("execution_count" . ,counter))))))))
 
 (define (shutdown socket uuid header- parent-header metadata content)
