@@ -172,7 +172,7 @@
 	    (set! err #t) 
 	    (set! err-key (with-output-to-string (lambda () (display key))))
 	    (set! evalue (with-output-to-string (lambda () (display parameters))))
-	    (set! stacktrace (vector err-key evalue))
+	    (set! stacktrace (vector err-key evalue)))
 	  ;; Capture the stack here:
 	  )
 	  
