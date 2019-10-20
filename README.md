@@ -33,8 +33,9 @@ $ sudo make install
 
 Headers and content of data in a message are streamed in json format. To work with this format, guile needs the library - [guile-json](https://github.com/aconchillo/guile-json). How to install it:
 ```
-$ wget http://download.savannah.gnu.org/releases/guile-json/guile-json-0.6.0.tar.gz
-$ tar xvf guile-json-0.6.0.tar.gz
+$ wget http://download.savannah.gnu.org/releases/guile-json/guile-json-3.2.0.tar.gz
+$ tar xvf guile-json-3.2.0.tar.gz
+$ cd guile-json-3.2.0
 $ ./configure --prefix=<guile-prefix>
 $ make
 $ sudo make install
