@@ -54,6 +54,19 @@ $ cd `guile -c "(display (%global-site-dir))"`
 $ wget https://raw.githubusercontent.com/jerry40/guile-simple-zmq/master/src/simple-zmq.scm
 ```
 
+Last, [Guile-Gcrypt](https://notabug.org/cwebber/guile-gcrypt) is needed
+to compute hash-based message authentication codes (HMACs) while
+communicating with Jupyter:
+```
+$ wget https://notabug.org/cwebber/guile-gcrypt/archive/v0.1.0.tar.gz
+$ tar xvf v0.1.0.tar.gz
+$ cd guile-gcrypt-0.1.0
+$ autoreconf -vfi
+$ ./configure --prefix=<guile-prefix>
+$ make
+$ sudo make install
+```
+
 ## Kernel setup
 According to the [article](http://jupyter-client.readthedocs.io/en/stable/kernels.html), the kernel can be placed into different loactions:
 

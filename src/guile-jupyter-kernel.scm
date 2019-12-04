@@ -1,11 +1,11 @@
 (use-modules (simple-zmq)
 	     (json)
+             (hmac)
 	     (srfi srfi-1)
              (srfi srfi-13)
 			 (ice-9 hash-table))
 
 (include "tools.scm")
-(include "hmac.scm")
 
 (define DELIM "<IDS|MSG>")
 

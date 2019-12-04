@@ -1,19 +1,12 @@
-(use-modules (ice-9 rdelim)
-	     (ice-9 popen))
+(define-module (hmac)
+  #:use-module (gcrypt hmac)
+  #:use-module (gcrypt base16)
+  #:use-module (rnrs bytevectors)
+  #:export (get-signature))
 
 (define (get-signature key str)
-  (let* ((p2c (pipe))	 
-	 (read-pipe  (car p2c))
-	 (write-pipe (cdr p2c))
-	 (port       (with-input-from-port read-pipe
-		       (lambda ()
-			 (open-input-pipe (string-append "openssl dgst -sha256 -hmac " key))))))
-    (display str write-pipe)    
-    (close-port write-pipe)
-    (let ((result (read-line port)))
-      (close-port read-pipe)
-      (close-pipe port)
-      (substring result 9))))
-	 
-
-
+  "Return a hexadecimal string containing the SHA256 HMAC of STR, a string,
+with KEY, another string."
+  (bytevector->base16-string
+   (sign-data key (string->utf8 str)
+              #:algorithm 'sha256)))
