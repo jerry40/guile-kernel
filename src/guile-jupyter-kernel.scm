@@ -4,8 +4,8 @@
              (srfi srfi-13)
 			 (ice-9 hash-table))
 
-(include "tools.scm")
-(include "hmac.scm")
+(load "tools.scm")
+(load "hmac.scm")
 
 (define DELIM "<IDS|MSG>")
 
