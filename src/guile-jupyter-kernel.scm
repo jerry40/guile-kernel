@@ -140,7 +140,7 @@
 	  (scm->json-string KERNEL-INFO)))
 
 (define (reply-execute-request socket uuid header- parent-header metadata content)
-    (let ((code              (string-append    "(begin " (assoc-ref content "code") ")")) ;; make one s-expression from possible list
+    (let ((code              (string-append    "(begin " (assoc-ref content "code") "\n)")) ;; make one s-expression from possible list
 	  (silent            (assoc-ref content "silent"))
 	  (store-history     (assoc-ref content "store_history"))
 	  (user-expressions  (assoc-ref content "user_expressions"))
