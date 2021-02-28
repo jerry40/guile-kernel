@@ -1,18 +1,25 @@
-FROM python:3
+FROM python:3.9.2
 ENV PYTHONUNBUFFERED 1
 RUN mkdir /code
 WORKDIR /code
+RUN sed -i "s/buster/testing/" /etc/apt/sources.list && \
+    sed -n -i "/security/!p" /etc/apt/sources.list
+RUN cat /etc/apt/sources.list
+RUN pip install jupyter
 RUN apt-get update && apt-get install -y \ 
-    guile-2.0-dev guile-2.0 automake gcc libunwind-dev
-RUN wget https://github.com/zeromq/libzmq/releases/download/v4.3.2/zeromq-4.3.2.tar.gz && \
-    tar xvf zeromq-4.3.2.tar.gz && cd /code/zeromq-4.3.2/ && \
+    guile-3.0 guile-3.0-dev automake gcc libunwind-dev build-essential
+RUN wget https://github.com/zeromq/libzmq/releases/download/v4.3.4/zeromq-4.3.4.tar.gz && \
+    tar xvf zeromq-4.3.4.tar.gz && cd /code/zeromq-4.3.4/ && \
     ./autogen.sh && ./configure CXXFLAGS='-Wno-error -Wno-error=stringop-truncation' && make && make install
 RUN wget http://download.savannah.gnu.org/releases/guile-json/guile-json-3.2.0.tar.gz && \
     tar xvf guile-json-3.2.0.tar.gz && cd guile-json-3.2.0 && \
     ./configure --prefix=/usr && make && make install
-RUN cd /usr/share/guile/site && \
-    wget https://raw.githubusercontent.com/jerry40/guile-simple-zmq/master/src/simple-zmq.scm
-RUN pip install jupyter
+# guile-zimple-zmq
+RUN git clone https://github.com/jerry40/guile-simple-zmq.git && \
+    cd ./guile-simple-zmq && \
+    autoreconf --verbose --install --force && \
+    ./configure --prefix=/usr && make && make install
+#
 RUN mkdir /usr/local/share/jupyter/kernels/guile
 WORKDIR /usr/local/share/jupyter/kernels/guile
 RUN git clone https://github.com/jerry40/guile-kernel.git
