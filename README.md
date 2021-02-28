@@ -9,6 +9,16 @@ Note 2: [FIXED] jupyter notebook 5.6.0 waits for 1 minute after start.
 ![](Demo1.png)
 
 ## Installation
+
+### Docker
+If possible use the docker image. It uses guile-3.0.
+```
+$ docker build -t guile-kernel .
+$ docker run -p8888:8888 guile-kernel
+```
+See messages in the console and open a link similar to `http://127.0.0.1:8888/?token=....` in the browser.
+
+### Local installation
 How to get GNU Guile version 2.0.12 or later (https://www.gnu.org/software/guile/manual/html_node/Obtaining-and-Installing-Guile.html):
 ```
 $ wget ftp://ftp.gnu.org/gnu/guile/guile-2.0.12.tar.gz
@@ -47,12 +57,14 @@ $ guile -c '(display %load-path) (newline)'
 To place guile-json to /usr/share/guile/site/ folder I executed ```$ ./configure --prefix=/usr```
 
 In order to get ZeroMQ messages, guile needs another library - [guile-simple-zmq](https://github.com/jerry40/guile-simple-zmq)
+```
+git clone https://github.com/jerry40/guile-simple-zmq.git
+cd ./guile-simple-zmq
+autoreconf --verbose --install --force && \
+./configure --prefix=/usr
+make && make install
+```
 
-It is one guile file which is not needed to be compiled so actually you can place it directly to the guile library folder:
-```
-$ cd `guile -c "(display (%global-site-dir))"`
-$ wget https://raw.githubusercontent.com/jerry40/guile-simple-zmq/master/src/simple-zmq.scm
-```
 
 ## Kernel setup
 According to the [article](http://jupyter-client.readthedocs.io/en/stable/kernels.html), the kernel can be placed into different loactions:
