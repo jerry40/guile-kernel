@@ -1,13 +1,10 @@
-FROM python:3.9.2
-ENV PYTHONUNBUFFERED 1
+FROM python:3.9.23
+ENV PYTHONUNBUFFERED=1
 RUN mkdir /code
 WORKDIR /code
-RUN sed -i "s/buster/testing/" /etc/apt/sources.list && \
-    sed -n -i "/security/!p" /etc/apt/sources.list
-RUN cat /etc/apt/sources.list
 RUN pip install jupyter
-RUN apt-get update && apt-get install -y \ 
-    guile-3.0 guile-3.0-dev automake gcc libunwind-dev build-essential
+RUN apt update
+RUN apt install -y guile-3.0 guile-3.0-dev automake gcc libunwind-dev build-essential
 RUN wget https://github.com/zeromq/libzmq/releases/download/v4.3.4/zeromq-4.3.4.tar.gz && \
     tar xvf zeromq-4.3.4.tar.gz && cd /code/zeromq-4.3.4/ && \
     ./autogen.sh && ./configure CXXFLAGS='-Wno-error -Wno-error=stringop-truncation' && make && make install
