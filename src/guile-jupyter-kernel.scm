@@ -14,7 +14,7 @@
                       ("implementation_version" . "0.0.2")
                       ("language_info" .
                        (("name" . "guile")
-                        ("version" . "2.0.0")
+                        ("version" . "3.0.0")
                         ("mimetype" . "application/x-scheme")
                         ("file_extension" . ".scm")
                         ("pygments_lexer" . "scheme")
@@ -67,7 +67,7 @@
 ;; bind sockets to addressess
 (for-each zmq-bind-socket sockets adresses)
 
-(define (send socket uuid header parent-header metadata content)  
+(define (send socket uuid header parent-header metadata content)
   (let ((signature (get-signature notebook-info-key
                                   (string-append header
                                                  parent-header
